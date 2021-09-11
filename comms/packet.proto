@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+// Generate for both python comms-server and go comms-client
+// protoc -I=comms/ --go_out="./" comms/packet.proto
+// protoc -I=comms/ --python_out="./scripts" comms/packet.proto
+package comms;
+option go_package = "./comms";
+
+message Packet{
+  string dance_move = 4;
+  float accuracy = 5;
+  uint64 epoch_ms = 6;
+  int32 pos_x = 7;
+  string email = 8;
+
+  // optional variables should be used at tag > 15
+  float ecg = 16;
+}
