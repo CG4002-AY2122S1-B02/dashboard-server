@@ -3,6 +3,11 @@ syntax = "proto3";
 // Generate for both python comms-server and go comms-client
 // protoc -I=comms/ --go_out="./" comms/packet.proto
 // protoc -I=comms/ --python_out="./scripts" comms/packet.proto
+
+// windows
+// ./protoc -I=comms/ --go_out="./" comms/packet.proto
+// ./protoc -I=comms/ --python_out="./scripts" comms/packet.proto
+
 package comms;
 option go_package = "./comms";
 
