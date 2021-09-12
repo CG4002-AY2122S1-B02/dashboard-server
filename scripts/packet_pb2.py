@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='comms',
   syntax='proto3',
   serialized_options=_b('Z\007./comms'),
-  serialized_pb=_b('\n\x0cpacket.proto\x12\x05\x63omms\"k\n\x06Packet\x12\x12\n\ndance_move\x18\x04 \x01(\t\x12\x10\n\x08\x61\x63\x63uracy\x18\x05 \x01(\x02\x12\x10\n\x08\x65poch_ms\x18\x06 \x01(\x04\x12\r\n\x05pos_x\x18\x07 \x01(\x05\x12\r\n\x05\x65mail\x18\x08 \x01(\t\x12\x0b\n\x03\x65\x63g\x18\x10 \x01(\x02\x42\tZ\x07./commsb\x06proto3')
+  serialized_pb=_b('\n\x0cpacket.proto\x12\x05\x63omms\"w\n\x06Packet\x12\x0c\n\x04user\x18\x01 \x01(\r\x12\x12\n\ndance_move\x18\x04 \x01(\t\x12\x10\n\x08\x61\x63\x63uracy\x18\x05 \x01(\x02\x12\x10\n\x08\x65poch_ms\x18\x06 \x01(\x04\x12\r\n\x05pos_x\x18\x07 \x01(\x05\x12\x0b\n\x03\x65\x63g\x18\x08 \x01(\x02\x12\x0b\n\x03\x65nd\x18\x0e \x01(\tB\tZ\x07./commsb\x06proto3')
 )
 
 
@@ -33,44 +33,51 @@ _PACKET = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='dance_move', full_name='comms.Packet.dance_move', index=0,
+      name='user', full_name='comms.Packet.user', index=0,
+      number=1, type=13, cpp_type=3, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='dance_move', full_name='comms.Packet.dance_move', index=1,
       number=4, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='accuracy', full_name='comms.Packet.accuracy', index=1,
+      name='accuracy', full_name='comms.Packet.accuracy', index=2,
       number=5, type=2, cpp_type=6, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='epoch_ms', full_name='comms.Packet.epoch_ms', index=2,
+      name='epoch_ms', full_name='comms.Packet.epoch_ms', index=3,
       number=6, type=4, cpp_type=4, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='pos_x', full_name='comms.Packet.pos_x', index=3,
+      name='pos_x', full_name='comms.Packet.pos_x', index=4,
       number=7, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='email', full_name='comms.Packet.email', index=4,
-      number=8, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
+      name='ecg', full_name='comms.Packet.ecg', index=5,
+      number=8, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='ecg', full_name='comms.Packet.ecg', index=5,
-      number=16, type=2, cpp_type=6, label=1,
-      has_default_value=False, default_value=float(0),
+      name='end', full_name='comms.Packet.end', index=6,
+      number=14, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -87,7 +94,7 @@ _PACKET = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=23,
-  serialized_end=130,
+  serialized_end=142,
 )
 
 DESCRIPTOR.message_types_by_name['Packet'] = _PACKET

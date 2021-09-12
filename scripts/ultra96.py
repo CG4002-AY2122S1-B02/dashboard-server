@@ -1,6 +1,7 @@
 # Test Script to send data (one-way communication) from Ultra96 FPGA to Database Server
 # Implementation using Python Socket API
 
+#python3 scripts/ultra96.py
 import sys
 import socket
 import time
@@ -20,10 +21,10 @@ class Client():
         self.socket.connect(server_address)
         print("Successfully connected to the database server")
 
-    def send_data(self, raw_message):
-        raw_message = raw_message.encode("utf8")
-        print(f"Sending data to Evaluation Server", raw_message)
-        self.socket.sendall(raw_message)
+    def send_data(self, packet):
+        packet.end = "\x7F"
+        print(f"Sending data to dashboard comm client", packet)
+        self.socket.sendall(packet.SerializeToString())
 
     def stop(self):
         self.connection.close()
@@ -32,10 +33,6 @@ class Client():
 
 
 def main():
-    packet = packet_pb2.Packet()
-    packet.email = "xxx"
-    print(packet)
-
     ip_addr = '127.0.0.1'
     port_num = 8080
     group_id = 2
@@ -55,12 +52,15 @@ def main():
     count = 0
     while action != "logout":
         # Send the Evaluation Server the received data from the 3 laptops
-        my_client.send_data(str(count))
+        packet = packet_pb2.Packet()
+        packet.user = 2
+        packet.pos_x = count
+        my_client.send_data(packet)
         # my_client.send_data("# 1 2 3 | dab | 1.00")
         # Receive the new dance move instructions from the Evaluation Server
-        time.sleep(0.02)
+        time.sleep(0.4)
         count += 1
-        if (count == 300):
+        if (count == 10):
             my_client.stop()
 
 

@@ -1,8 +1,10 @@
 package comms
 
 import (
-	"encoding/binary"
+	"bufio"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"io"
 	"net"
 	"os"
 )
@@ -13,8 +15,18 @@ const (
 	connType = "tcp"
 )
 
+var packetStream chan Packet
+
+func InitComm() {
+	packetStream = make(chan Packet, 256)
+}
+
+func ReadStream() Packet {
+	return <-packetStream
+}
+
 func ClientListen() {
-	fmt.Println("Starting " + connType + " server on " + connHost + ":" + connPort)
+	fmt.Println("Listening to Comms-Ultra96 via " + connType + " on " + connHost + ":" + connPort)
 	l, err := net.Listen(connType, connHost+":"+connPort)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
@@ -32,25 +44,29 @@ func ClientListen() {
 
 		fmt.Println("Client " + c.RemoteAddr().String() + " connected.")
 
-		handleRequest(c)
+		go handleRequest(c)
 	}
 }
 
 func handleRequest(conn net.Conn) {
-	// Buffer that holds incoming information
-	buf := make([]byte, 8)
+	br := bufio.NewReader(conn)
 
 	for {
-		len, err := conn.Read(buf)
-
+		packetData, err := br.ReadBytes('\x7F')
 		if err != nil {
-			fmt.Println("Error reading:", err.Error())
+			if err != io.EOF {
+				fmt.Println("Error reading:", err.Error())
+			}
 			break
 		}
 
-		s := string(buf[:len])
+		packet := &Packet{}
+		err = proto.Unmarshal(packetData, packet)
+		if err != nil {
+			fmt.Println("Unmarshall Error", err.Error())
+		}
 
-		fmt.Println("Stuff", s)
-		fmt.Println("len", binary.Size(buf))
+		fmt.Println(packet)
+		packetStream <- *packet
 	}
 }

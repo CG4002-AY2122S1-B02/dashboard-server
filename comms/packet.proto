@@ -12,12 +12,11 @@ package comms;
 option go_package = "./comms";
 
 message Packet{
+  uint32 user = 1;
   string dance_move = 4;
   float accuracy = 5;
   uint64 epoch_ms = 6;
   int32 pos_x = 7;
-  string email = 8;
-
-  // optional variables should be used at tag > 15
-  float ecg = 16;
+  float ecg = 8;
+  string end = 14;
 }
