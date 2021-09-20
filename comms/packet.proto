@@ -4,19 +4,25 @@ syntax = "proto3";
 // protoc -I=comms/ --go_out="./" comms/packet.proto
 // protoc -I=comms/ --python_out="./scripts" comms/packet.proto
 
+// protoc -I=comms/ --go_out="./internal" comms/packet.proto
+// protoc -I=comms/ --python_out="./scripts" comms/packet.proto
+
 // windows
 // ./protoc -I=comms/ --go_out="./" comms/packet.proto
 // ./protoc -I=comms/ --python_out="./scripts" comms/packet.proto
 
-package comms;
-option go_package = "./comms";
+package session;
+option go_package = "./session";
 
 message Packet{
-  uint32 user = 1;
+  uint32 user = 2; //might not need this cos each stream is from one user
   string dance_move = 4;
   float accuracy = 5;
-  uint64 epoch_ms = 6;
-  int32 pos_x = 7;
-  float ecg = 8;
+  uint64 epoch_ms= 6;
   string end = 14;
+}
+
+message Position{
+  string position = 1;
+  string end = 2;
 }

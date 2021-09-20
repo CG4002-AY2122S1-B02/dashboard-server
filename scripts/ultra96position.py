@@ -1,58 +1,29 @@
 # Test Script to send data (one-way communication) from Ultra96 FPGA to Database Server
 # Implementation using Python Socket API
 
-#python3 scripts/ultra96.py 8881
-#python3 scripts/ultra96.py 8882
-#python3 scripts/ultra96.py 8883
+#python3 scripts/ultra96position.py
 
 import sys
 import socket
 import time
 import packet_pb2
 
-user = 1
-
-packet_stream_test = [
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "Dab",
-        accuracy=2,
+position_stream_test = [
+    packet_pb2.Position(
+        position="123"
     ),
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "Scarecrow",
-        accuracy=1,
+    packet_pb2.Position(
+        position="213"
     ),
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "Window360",
-        accuracy=3,
+    packet_pb2.Position(
+        position="312"
     ),
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "James Bond",
-        accuracy=3,
+    packet_pb2.Position(
+        position="321"
     ),
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "Mermaid",
-        accuracy=2,
+    packet_pb2.Position(
+        position="231"
     ),
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "Push Back",
-        accuracy=2,
-    ),
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "Snake",
-        accuracy=3,
-    ),
-    packet_pb2.Packet(
-        user=1,
-        dance_move = "Cowboy",
-        accuracy=1,
-    )
 ]
 
 class Client():
@@ -68,10 +39,10 @@ class Client():
         self.socket.connect(server_address)
         print("Successfully connected to the dashboard server")
 
-    def send_data(self, packet):
-        packet.end = "\x7F"
-        print(f"Sending data to dashboard comm client", packet)
-        self.socket.sendall(packet.SerializeToString())
+    def send_data(self, position):
+        position.end = "\x7F"
+        print(f"Sending data to dashboard comm client", position)
+        self.socket.sendall(position.SerializeToString())
 
     def stop(self):
         self.connection.close()
@@ -81,7 +52,7 @@ class Client():
 
 def main():
     ip_addr = '127.0.0.1'
-    port_num = 8881
+    port_num = 8880
     group_id = 2
     if len(sys.argv) == 2:
         port_num = int(sys.argv[1])
@@ -102,14 +73,12 @@ def main():
     count = 0
     while action != "logout":
         # Send the Evaluation Server the received data from the 3 laptops
-        packet = packet_stream_test[count]
-        packet.epoch_ms = int(time.time() * 1000)
-        packet.user = user
-        my_client.send_data(packet)
+        position = position_stream_test[count]
+        my_client.send_data(position)
         # my_client.send_data("# 1 2 3 | dab | 1.00")
         # Receive the new dance move instructions from the Evaluation Server
-        time.sleep(2)
-        count = (count + 1) % len(packet_stream_test)
+        time.sleep(3)
+        count = (count + 1) % len(position_stream_test)
 #         if (count == len(packet_stream_test)):
 #             my_client.stop()
 

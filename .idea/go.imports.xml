@@ -4,6 +4,7 @@
     <option name="excludedPackages">
       <array>
         <option value="dashboard-server/comms" />
+        <option value="github.com/golang/protobuf/proto" />
       </array>
     </option>
   </component>
