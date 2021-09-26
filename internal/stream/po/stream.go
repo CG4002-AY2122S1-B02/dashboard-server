@@ -18,12 +18,12 @@ type SensorData struct {
 
 //sync delay can be computed by comparing all packetTimestamp of sensorData with the same move_num
 
-func CreateSensorData(
+func CreateSensorDataStruct(
 	packet session.Packet,
 	accountName string,
 	username string,
 	sessionTimestamp uint64,
-	moveNum uint32) (*SensorData, error) {
+	moveNum uint32) *SensorData {
 	sensorData := SensorData{
 		MoveNum:          moveNum,
 		Username:         username,
@@ -34,9 +34,24 @@ func CreateSensorData(
 		Accuracy:         packet.Accuracy,
 	}
 
-	if err := dbutils.GetDB().Create(&sensorData).Error; err != nil {
-		return nil, errors.Wrapf(err, "create sensor data '%v' failed", sensorData)
+	return &sensorData
+}
+
+func CreateSensorDataFromStruct(sensorData *SensorData) error {
+
+	if err := dbutils.GetDB().Create(sensorData).Error; err != nil {
+		return errors.Wrapf(err, "create sensor data '%v' failed", sensorData)
 	}
 
-	return &sensorData, nil
+	return nil
+}
+
+func CreateBatchSensorDataFromStructs(sensorData *[]SensorData) (int64, error) {
+
+	ret := dbutils.GetDB().Create(sensorData)
+	if err := ret.Error; err != nil {
+		return 0, errors.Wrapf(err, "create batch sensor data '%v' failed", sensorData)
+	}
+
+	return ret.RowsAffected, nil
 }

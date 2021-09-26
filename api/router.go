@@ -3,8 +3,9 @@ package api
 import (
 	"dashboard-server/comms"
 	"dashboard-server/dbutils"
-	"dashboard-server/internal/session/po"
-	po2 "dashboard-server/internal/user/po"
+	sessionPo "dashboard-server/internal/session/po"
+	streamPo "dashboard-server/internal/stream/po"
+	userPo "dashboard-server/internal/user/po"
 	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -67,6 +68,13 @@ func NewRouter() *Router {
 	//Todo
 	sessionAPI := r.Group("/apis/session")
 	sessionAPI.GET("/get", s.GetSession)
+	sessionAPI.GET("/current", s.GetCurrentSession)
+	sessionAPI.POST("/upload", s.UploadSession)
+
+	danceAPI := r.Group("/apis/dance")
+	danceAPI.GET("/duration", s.GetDanceDuration)
+	danceAPI.GET("/buddies", s.GetDanceBuddies)
+	danceAPI.GET("/performance", s.GetDancePerformance)
 
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000"}
@@ -76,13 +84,15 @@ func NewRouter() *Router {
 }
 
 func (r *Router) Run() {
-	err := dbutils.GetDB().AutoMigrate(&po.SensorData{}, po.Session{})
-	if err := dbutils.GetDB().AutoMigrate(
-		&po.SensorData{},
-		&po.Session{},
-		&po2.User{},
-		&po2.Account{},
-	); err != nil {
+	err := dbutils.GetDB().AutoMigrate(
+		&streamPo.SensorData{},
+		&streamPo.SyncDelay{},
+		&sessionPo.Session{},
+		&sessionPo.UserSession{},
+		&userPo.User{},
+		&userPo.Account{},
+	)
+	if err != nil {
 		log.Fatal("db auto migrate failed:", err.Error())
 	}
 

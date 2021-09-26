@@ -3,12 +3,12 @@ package comms
 import (
 	"bufio"
 	"dashboard-server/internal/session"
-	"dashboard-server/internal/session/po"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 const (
@@ -26,7 +26,36 @@ type StreamCommand struct {
 	sessionTimestamp uint64
 }
 
-var streamMap map[int]*Stream
+type StreamBuffer struct {
+	PortMap  map[int][]session.Packet
+	Position []session.Position
+}
+
+func (sb *StreamBuffer) Clear() {
+	sb.PortMap = make(map[int][]session.Packet)
+	sb.Position = make([]session.Position, 0)
+}
+
+func GetStreamBuffer() *StreamBuffer {
+	streamBufferOnce.Do(func() {
+		streamBuffer = StreamBuffer{
+			make(map[int][]session.Packet),
+			make([]session.Position, 0),
+		}
+
+		streamBuffer.PortMap[8881] = make([]session.Packet, 0)
+		streamBuffer.PortMap[8882] = make([]session.Packet, 0)
+		streamBuffer.PortMap[8883] = make([]session.Packet, 0)
+	})
+
+	return &streamBuffer
+}
+
+var (
+	streamMap        map[int]*Stream
+	streamBuffer     StreamBuffer
+	streamBufferOnce sync.Once
+)
 
 type Stream struct {
 	port             int
@@ -84,6 +113,13 @@ func (s *Stream) GetLastAccuracy() float32 {
 func UpdateCommandStream(start bool, accountName string,
 	username1 string, username2 string, username3 string,
 	sessionTimestamp uint64) {
+
+	if start == true {
+		GetStreamBuffer().Clear()
+	}
+
+	GetPositionStream().UpdateCommandStream(start)
+
 	command1 := StreamCommand{start, username1, accountName, sessionTimestamp}
 	command2 := StreamCommand{start, username2, accountName, sessionTimestamp}
 	command3 := StreamCommand{start, username3, accountName, sessionTimestamp}
@@ -156,7 +192,9 @@ func (s *Stream) handleRequest(conn net.Conn) {
 		}
 
 		if s.start {
-			go po.CreateSensorData(*packet, s.accountName, s.username, s.sessionTimestamp, uint32(moveNum))
+			//go po.CreateSensorData(*packet, s.accountName, s.username, s.sessionTimestamp, uint32(moveNum))
+			GetStreamBuffer().PortMap[s.port] = append(GetStreamBuffer().PortMap[s.port], *packet)
+
 			s.packetStream <- *packet
 			moveNum += 1
 		}

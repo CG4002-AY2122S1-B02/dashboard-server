@@ -32,8 +32,9 @@ func GetPositionStream() *PositionStream {
 		commandStream := make(chan bool, bufferLength)
 		PositionDataStream = &PositionStream{positionStream: positionStream,
 			commandStream: commandStream, start: testPosition}
+		go PositionDataStream.ClientListen()
 	})
-	go PositionDataStream.ClientListen()
+
 	return PositionDataStream
 }
 
@@ -97,7 +98,8 @@ func (p *PositionStream) handleRequest(conn net.Conn) {
 		p.checkCommandStream()
 
 		if p.start {
-			p.positionStream <- *position
+			GetStreamBuffer().Position = append(GetStreamBuffer().Position, *position)
 		}
+		p.positionStream <- *position
 	}
 }
