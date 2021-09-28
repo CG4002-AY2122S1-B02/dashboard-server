@@ -82,5 +82,20 @@ func UploadSession(req UploadSessionReq) (*UploadSessionResp, error) {
 		}
 	}
 
+	batchPositionData := make([]streamPo.PositionData, len(req.SensorData.Position))
+	for i, p := range req.SensorData.Position {
+		batchPositionData[i] = streamPo.PositionData{
+			AccountName: req.AccountName,
+			SessionTimestamp: req.SessionTimestamp,
+			PacketTimestamp: p.EpochMs,
+			Correct: p.End == "correct",
+		}
+	}
+
+	_, err = streamPo.CreateBatchPositionDataFromStructs(&batchPositionData)
+	if err != nil {
+		return nil, errors.Wrap(err, "create batch position data error")
+	}
+
 	return &UploadSessionResp{Session: session, NumSensorDataAdded: totalSensorData}, nil
 }

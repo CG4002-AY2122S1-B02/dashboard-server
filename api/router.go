@@ -72,9 +72,11 @@ func NewRouter() *Router {
 	sessionAPI.POST("/upload", s.UploadSession)
 
 	danceAPI := r.Group("/apis/dance")
-	danceAPI.GET("/duration", s.GetDanceDuration)
-	danceAPI.GET("/buddies", s.GetDanceBuddies)
-	danceAPI.GET("/performance", s.GetDancePerformance)
+	danceAPI.POST("/duration", s.GetDanceDuration)
+	danceAPI.POST("/buddies", s.GetDanceBuddies)
+	danceAPI.POST("/performance", s.GetDancePerformance)
+	danceAPI.POST("/overview", s.GetDanceOverview)
+	danceAPI.POST("/progress", s.GetDanceProgress)
 
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"http://localhost:3000"}
@@ -87,6 +89,7 @@ func (r *Router) Run() {
 	err := dbutils.GetDB().AutoMigrate(
 		&streamPo.SensorData{},
 		&streamPo.SyncDelay{},
+		&streamPo.PositionData{},
 		&sessionPo.Session{},
 		&sessionPo.UserSession{},
 		&userPo.User{},

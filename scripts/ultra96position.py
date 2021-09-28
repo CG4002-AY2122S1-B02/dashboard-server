@@ -41,7 +41,7 @@ class Client():
 
     def send_data(self, position):
         position.end = "\x7F"
-        print(f"Sending data to dashboard comm client", position)
+#         print(f"Sending data to dashboard comm client", position)
         self.socket.sendall(position.SerializeToString())
 
     def stop(self):
@@ -74,6 +74,7 @@ def main():
     while action != "logout":
         # Send the Evaluation Server the received data from the 3 laptops
         position = position_stream_test[count]
+        position.epoch_ms = int(time.time() * 1000)
         my_client.send_data(position)
         # my_client.send_data("# 1 2 3 | dab | 1.00")
         # Receive the new dance move instructions from the Evaluation Server

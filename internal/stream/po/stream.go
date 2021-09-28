@@ -16,6 +16,13 @@ type SensorData struct {
 	Accuracy         float32
 }
 
+type PositionData struct {
+	AccountName      string `gorm:"primaryKey"`
+	SessionTimestamp uint64 `gorm:"primaryKey;autoIncrement:false"`
+	PacketTimestamp  uint64 `gorm:"primaryKey;autoIncrement:false"`
+	Correct          bool
+}
+
 //sync delay can be computed by comparing all packetTimestamp of sensorData with the same move_num
 
 func CreateSensorDataStruct(
@@ -51,6 +58,14 @@ func CreateBatchSensorDataFromStructs(sensorData *[]SensorData) (int64, error) {
 	ret := dbutils.GetDB().Create(sensorData)
 	if err := ret.Error; err != nil {
 		return 0, errors.Wrapf(err, "create batch sensor data '%v' failed", sensorData)
+	}
+
+	return ret.RowsAffected, nil
+}
+func CreateBatchPositionDataFromStructs(positionData *[]PositionData) (int64, error) {
+	ret := dbutils.GetDB().Create(positionData)
+	if err := ret.Error; err != nil {
+		return 0, errors.Wrapf(err, "create batch sensor data '%v' failed", positionData)
 	}
 
 	return ret.RowsAffected, nil

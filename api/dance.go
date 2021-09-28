@@ -55,3 +55,37 @@ func (s *Server) GetDanceBuddies(c *gin.Context) {
 
 	c.JSON(200, resp)
 }
+
+func (s *Server) GetDanceOverview(c *gin.Context) {
+	var req vo.GetUserDanceReq
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(404, gin.H{"message": "invalid request", "success": false})
+		return
+	}
+
+	resp, err := vo.GetDanceOverview(req)
+	if err != nil {
+		c.JSON(404, gin.H{"message": err.Error(), "success": false})
+		return
+	}
+
+	c.JSON(200, resp)
+}
+
+func (s *Server) GetDanceProgress(c *gin.Context) {
+	var req vo.GetUserDanceReq
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(404, gin.H{"message": "invalid request", "success": false})
+		return
+	}
+
+	resp, err := vo.GetDanceProgress(req)
+	if err != nil {
+		c.JSON(404, gin.H{"message": err.Error(), "success": false})
+		return
+	}
+
+	c.JSON(200, resp)
+}

@@ -24,5 +24,6 @@ message Packet{
 
 message Position{
   string position = 1;
-  string end = 2;
+  uint64 epoch_ms= 2;
+  string end = 3;
 }

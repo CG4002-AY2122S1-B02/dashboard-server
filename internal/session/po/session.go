@@ -4,6 +4,7 @@ import (
 	"dashboard-server/dbutils"
 	"dashboard-server/internal/stream/po"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type Session struct {
@@ -100,6 +101,9 @@ func GetUserSessionTimestamps(account string, username string, timeStart uint64,
 		Where(&UserSession{Account: account, Username: username}).
 		Where("session_timestamp >= ?",timeStart).Where("session_timestamp <= ?", timeEnd).
 		Find(&results).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return []uint64{},nil
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "db get user session timestamps error")
 	}

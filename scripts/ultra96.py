@@ -70,7 +70,7 @@ class Client():
 
     def send_data(self, packet):
         packet.end = "\x7F"
-        print(f"Sending data to dashboard comm client", packet)
+#         print(f"Sending data to dashboard comm client", packet)
         self.socket.sendall(packet.SerializeToString())
 
     def stop(self):
