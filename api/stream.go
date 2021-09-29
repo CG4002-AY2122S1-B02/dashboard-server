@@ -71,6 +71,23 @@ func websocketPositionData(w http.ResponseWriter, r *http.Request) error {
 	}
 }
 
+func websocketGroupSyncDelay(w http.ResponseWriter, r *http.Request) error {
+	wsupgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	conn, err := wsupgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Failed to set websocket upgrade: %+v\n", err)
+		return errors.Wrap(err, "websocket handler error")
+	}
+
+	for {
+		groupSyncDelay := comms.GetStreamBuffer().ReadGroupSyncDelay()
+
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprint(groupSyncDelay))); err != nil {
+			return errors.Wrap(err, "failed to retrieve group sync delay")
+		}
+	}
+}
+
 func (s *Server) PostStreamCommand(c *gin.Context) {
 	var req vo.PostStreamCommandReq
 

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	"log"
 	"strconv"
 )
@@ -54,6 +55,14 @@ func NewRouter() *Router {
 	streamAPI.GET("/position", func(c *gin.Context) {
 		websocketPositionData(c.Writer, c.Request)
 	})
+
+	streamAPI.GET("/sync", func(c *gin.Context) {
+		err := websocketGroupSyncDelay(c.Writer, c.Request)
+		if err != nil {
+			fmt.Println(errors.Wrap(err, "sync delay err"))
+		}
+	})
+
 	streamAPI.POST("/command", s.PostStreamCommand)
 	//user apis
 	//Todo

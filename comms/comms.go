@@ -3,6 +3,7 @@ package comms
 import (
 	"bufio"
 	"dashboard-server/internal/session"
+	"dashboard-server/internal/stream/po"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"io"
@@ -19,6 +20,12 @@ const (
 	testPosition = true
 )
 
+var (
+	streamMap        map[int]*Stream
+	streamBuffer     *StreamBuffer
+	streamBufferOnce sync.Once
+)
+
 type StreamCommand struct {
 	start            bool
 	username         string
@@ -28,19 +35,58 @@ type StreamCommand struct {
 
 type StreamBuffer struct {
 	PortMap  map[int][]session.Packet
-	Position []session.Position
+	Position       []session.Position
+	groupSyncDelay chan uint64
+	pointer        int
 }
 
 func (sb *StreamBuffer) Clear() {
 	sb.PortMap = make(map[int][]session.Packet)
 	sb.Position = make([]session.Position, 0)
+	sb.groupSyncDelay = make(chan uint64, bufferLength)
+	sb.pointer = 0
+}
+
+func (sb *StreamBuffer) ReadGroupSyncDelay() uint64 {
+	return <- sb.groupSyncDelay
+}
+
+func (sb *StreamBuffer) UpdateGroupSyncDelay() {
+		//if session packet buffer is full for all users at that index, can compute group sync delay
+	if len(sb.PortMap[8881]) < sb.pointer + 1 {
+		//if buffer v has not reached next dance move, we cannot compute
+		return
+	}
+	if len(sb.PortMap[8882]) < sb.pointer + 1 {
+		//if buffer v has not reached next dance move, we cannot compute
+		return
+	}
+	if len(sb.PortMap[8883]) < sb.pointer + 1 {
+		//if buffer v has not reached next dance move, we cannot compute
+		return
+	}
+
+
+	//all buffers would be at least len(sb.PortMap) long
+	//now pointer points to the buffer slot to compute group sync delay
+
+	syncDelay := po.ComputeSyncDelay(
+		[]uint64{sb.PortMap[8881][sb.pointer].EpochMs,
+			sb.PortMap[8882][sb.pointer].EpochMs,
+			sb.PortMap[8883][sb.pointer].EpochMs})
+
+	sb.groupSyncDelay <- syncDelay
+
+	sb.pointer += 1
 }
 
 func GetStreamBuffer() *StreamBuffer {
 	streamBufferOnce.Do(func() {
-		streamBuffer = StreamBuffer{
+		streamBuffer = &StreamBuffer{
 			make(map[int][]session.Packet),
 			make([]session.Position, 0),
+			make(chan uint64, bufferLength),
+			0,
 		}
 
 		streamBuffer.PortMap[8881] = make([]session.Packet, 0)
@@ -48,14 +94,8 @@ func GetStreamBuffer() *StreamBuffer {
 		streamBuffer.PortMap[8883] = make([]session.Packet, 0)
 	})
 
-	return &streamBuffer
+	return streamBuffer
 }
-
-var (
-	streamMap        map[int]*Stream
-	streamBuffer     StreamBuffer
-	streamBufferOnce sync.Once
-)
 
 type Stream struct {
 	port             int
@@ -194,7 +234,7 @@ func (s *Stream) handleRequest(conn net.Conn) {
 		if s.start {
 			//go po.CreateSensorData(*packet, s.accountName, s.username, s.sessionTimestamp, uint32(moveNum))
 			GetStreamBuffer().PortMap[s.port] = append(GetStreamBuffer().PortMap[s.port], *packet)
-
+			go GetStreamBuffer().UpdateGroupSyncDelay()
 			s.packetStream <- *packet
 			moveNum += 1
 		}
