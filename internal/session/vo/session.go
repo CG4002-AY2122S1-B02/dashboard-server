@@ -12,6 +12,7 @@ type GetCurrentSessionResp struct {
 	User2    []session.Packet   `json:"user_2"`
 	User3    []session.Packet   `json:"user_3"`
 	Position []session.Position `json:"position"`
+	AvgGroupSyncDelay uint64 `json:"avg_group_sync_delay"`
 }
 
 type UploadSessionReq struct {

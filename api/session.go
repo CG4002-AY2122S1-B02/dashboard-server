@@ -19,6 +19,7 @@ func (s *Server) GetCurrentSession(c *gin.Context) {
 			User2:    comms.GetStreamBuffer().PortMap[8882],
 			User3:    comms.GetStreamBuffer().PortMap[8883],
 			Position: comms.GetStreamBuffer().Position,
+			AvgGroupSyncDelay: comms.GetStreamBuffer().GetAvgSyncDelay(),
 		})
 }
 

@@ -12,18 +12,18 @@ syntax = "proto3";
 // ./protoc -I=comms/ --python_out="./scripts" comms/packet.proto
 
 package session;
-option go_package = "./session";
+  option go_package = "./session";
 
-message Packet{
-  uint32 user = 2; //might not need this cos each stream is from one user
-  string dance_move = 4;
-  float accuracy = 5;
-  uint64 epoch_ms= 6;
-  string end = 14;
-}
+  message Packet{
+    uint32 user = 2; //might not need this cos each stream is from one user
+    string dance_move = 4;
+    float accuracy = 5;
+    uint64 epoch_ms= 6;
+    string end = 14;
+  }
 
-message Position{
-  string position = 1;
+  message Position{
+    string position = 1;
   uint64 epoch_ms= 2;
   string end = 3;
 }

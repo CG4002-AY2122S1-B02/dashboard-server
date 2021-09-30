@@ -8,6 +8,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"io"
 	"log"
+	"math"
 	"net"
 	"sync"
 )
@@ -38,6 +39,7 @@ type StreamBuffer struct {
 	Position       []session.Position
 	groupSyncDelay chan uint64
 	pointer        int
+	totalSyncDelay uint64
 }
 
 func (sb *StreamBuffer) Clear() {
@@ -45,6 +47,7 @@ func (sb *StreamBuffer) Clear() {
 	sb.Position = make([]session.Position, 0)
 	sb.groupSyncDelay = make(chan uint64, bufferLength)
 	sb.pointer = 0
+	sb.totalSyncDelay = 0
 }
 
 func (sb *StreamBuffer) ReadGroupSyncDelay() uint64 {
@@ -76,8 +79,13 @@ func (sb *StreamBuffer) UpdateGroupSyncDelay() {
 			sb.PortMap[8883][sb.pointer].EpochMs})
 
 	sb.groupSyncDelay <- syncDelay
+	sb.totalSyncDelay += syncDelay
 
 	sb.pointer += 1
+}
+
+func (sb *StreamBuffer) GetAvgSyncDelay() uint64 {
+	return uint64(math.Round(float64(sb.totalSyncDelay) / float64(sb.pointer)))
 }
 
 func GetStreamBuffer() *StreamBuffer {
@@ -86,6 +94,7 @@ func GetStreamBuffer() *StreamBuffer {
 			make(map[int][]session.Packet),
 			make([]session.Position, 0),
 			make(chan uint64, bufferLength),
+			0,
 			0,
 		}
 

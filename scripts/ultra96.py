@@ -9,6 +9,9 @@ import sys
 import socket
 import time
 import packet_pb2
+from random import seed
+from random import random
+seed(1)
 
 user = 1
 
@@ -108,7 +111,7 @@ def main():
         my_client.send_data(packet)
         # my_client.send_data("# 1 2 3 | dab | 1.00")
         # Receive the new dance move instructions from the Evaluation Server
-        time.sleep(2)
+        time.sleep(2) # + random() * 0.5)
         count = (count + 1) % len(packet_stream_test)
 #         if (count == len(packet_stream_test)):
 #             my_client.stop()
