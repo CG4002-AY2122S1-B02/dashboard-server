@@ -25,6 +25,9 @@ position_stream_test = [
     packet_pb2.Position(
         position="231"
     ),
+    packet_pb2.Position(
+        position="132"
+    ),
 ]
 
 class Client():

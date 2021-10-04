@@ -194,27 +194,40 @@ func (s *Stream) checkCommandStream() bool {
 	return changed
 }
 
+//func (s *Stream) ClientListen() {
+//	connPort := fmt.Sprint(s.port)
+//	fmt.Println("Listening to Comms-Ultra96 via " + connType + " on " + connHost + ":" + connPort)
+//	l, err := net.Listen(connType, connHost+":"+connPort)
+//	if err != nil {
+//		log.Fatal("Error listening:", err.Error())
+//	}
+//	defer l.Close()
+//
+//	for {
+//		c, err := l.Accept()
+//		if err != nil {
+//			fmt.Println("Error connecting:", err.Error())
+//			return
+//		}
+//		fmt.Println("Client connected.")
+//
+//		fmt.Println("Client " + c.RemoteAddr().String() + " connected.")
+//
+//		go s.handleRequest(c)
+//	}
+//}
+
 func (s *Stream) ClientListen() {
 	connPort := fmt.Sprint(s.port)
 	fmt.Println("Listening to Comms-Ultra96 via " + connType + " on " + connHost + ":" + connPort)
-	l, err := net.Listen(connType, connHost+":"+connPort)
-	if err != nil {
+	c, err := net.Dial(connType, connHost+":"+connPort)
+	for err != nil {
 		log.Fatal("Error listening:", err.Error())
 	}
-	defer l.Close()
+	defer c.Close()
 
-	for {
-		c, err := l.Accept()
-		if err != nil {
-			fmt.Println("Error connecting:", err.Error())
-			return
-		}
-		fmt.Println("Client connected.")
-
-		fmt.Println("Client " + c.RemoteAddr().String() + " connected.")
-
-		go s.handleRequest(c)
-	}
+	fmt.Println("Successfully Connected to Ultra96 on port:" + connPort)
+	s.handleRequest(c)
 }
 
 func (s *Stream) handleRequest(conn net.Conn) {
