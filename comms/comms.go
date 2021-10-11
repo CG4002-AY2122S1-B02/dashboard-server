@@ -19,6 +19,8 @@ const (
 	bufferLength = 256
 	testComms    = false
 	testPosition = true
+	lowerBound3star = 0.80
+	lowerBound2star = 0.60
 )
 
 var (
@@ -254,11 +256,24 @@ func (s *Stream) handleRequest(conn net.Conn) {
 		}
 
 		if s.start {
-			//go po.CreateSensorData(*packet, s.accountName, s.username, s.sessionTimestamp, uint32(moveNum))
+			packet = confidenceLevelAdjustment(packet)
+
 			GetStreamBuffer().PortMap[s.port] = append(GetStreamBuffer().PortMap[s.port], *packet)
 			go GetStreamBuffer().UpdateGroupSyncDelay()
 			s.packetStream <- *packet
 			moveNum += 1
 		}
 	}
+}
+
+func confidenceLevelAdjustment(packet *session.Packet) *session.Packet {
+	if packet.Accuracy >= lowerBound3star {
+		(*packet).Accuracy = 3
+	} else if packet.Accuracy >= lowerBound2star {
+		(*packet).Accuracy = 2
+	} else {
+		(*packet).Accuracy = 1
+	}
+
+	return packet
 }

@@ -45,35 +45,35 @@ position_stream_test = [
 packet_stream_test = [
     packet_pb2.Packet(
         dance_move = "Dab",
-        accuracy=2,
+        accuracy=0.9,
     ),
     packet_pb2.Packet(
         dance_move = "Scarecrow",
-        accuracy=1,
+        accuracy=0.3,
     ),
     packet_pb2.Packet(
         dance_move = "Window360",
-        accuracy=3,
+        accuracy=0.61,
     ),
     packet_pb2.Packet(
         dance_move = "James Bond",
-        accuracy=3,
+        accuracy=0.9,
     ),
     packet_pb2.Packet(
         dance_move = "Mermaid",
-        accuracy=2,
+        accuracy=0.7,
     ),
     packet_pb2.Packet(
         dance_move = "Push Back",
-        accuracy=2,
+        accuracy=0.88,
     ),
     packet_pb2.Packet(
         dance_move = "Snake",
-        accuracy=3,
+        accuracy=0.15,
     ),
     packet_pb2.Packet(
         dance_move = "Cowboy",
-        accuracy=1,
+        accuracy=0.97,
     )
 ]
 
