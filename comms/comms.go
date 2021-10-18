@@ -19,8 +19,21 @@ const (
 	bufferLength = 256
 	testComms    = false
 	testPosition = true
-	lowerBound3star = 0.80
-	lowerBound2star = 0.60
+
+	/**
+	accuracy
+	~0.58
+	~0.71
+	~(8s) 0.50 dab
+	~(9s) 0.675 jamesbond
+	~0.533 mermaid
+	~0.583 Dab
+	~(9s) 0.756 jamesbond
+	~(9s) 0.49 Mermaid
+	 */
+
+	lowerBound3star = 0.65
+	lowerBound2star = 0.55
 )
 
 var (
@@ -87,6 +100,10 @@ func (sb *StreamBuffer) UpdateGroupSyncDelay() {
 }
 
 func (sb *StreamBuffer) GetAvgSyncDelay() uint64 {
+	if sb.pointer == 0 {
+		return 0
+	}
+
 	return uint64(math.Round(float64(sb.totalSyncDelay) / float64(sb.pointer)))
 }
 
@@ -148,8 +165,11 @@ func InitialiseStream(port int,
 
 func (s *Stream) ReadStream() session.Packet {
 	packet := <-s.packetStream
-	s.lastMove <- packet.DanceMove
-	s.lastAccuracy <- packet.Accuracy
+	if packet.Accuracy >= 0 {
+		s.lastMove <- packet.DanceMove
+		s.lastAccuracy <- packet.Accuracy
+	}
+
 	return packet
 }
 
@@ -258,7 +278,10 @@ func (s *Stream) handleRequest(conn net.Conn) {
 		if s.start {
 			packet = confidenceLevelAdjustment(packet)
 
-			GetStreamBuffer().PortMap[s.port] = append(GetStreamBuffer().PortMap[s.port], *packet)
+			if packet.DanceMove != "START" && packet.Accuracy > -4000 {
+				GetStreamBuffer().PortMap[s.port] = append(GetStreamBuffer().PortMap[s.port], *packet)
+			}
+
 			go GetStreamBuffer().UpdateGroupSyncDelay()
 			s.packetStream <- *packet
 			moveNum += 1
@@ -267,6 +290,9 @@ func (s *Stream) handleRequest(conn net.Conn) {
 }
 
 func confidenceLevelAdjustment(packet *session.Packet) *session.Packet {
+	if packet.Accuracy < 0 {
+		return packet
+	}
 	if packet.Accuracy >= lowerBound3star {
 		(*packet).Accuracy = 3
 	} else if packet.Accuracy >= lowerBound2star {

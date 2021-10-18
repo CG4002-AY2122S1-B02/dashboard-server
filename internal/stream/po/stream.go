@@ -54,6 +54,9 @@ func CreateSensorDataFromStruct(sensorData *SensorData) error {
 }
 
 func CreateBatchSensorDataFromStructs(sensorData *[]SensorData) (int64, error) {
+	if len(*sensorData) == 0 {
+		return 0, nil
+	}
 
 	ret := dbutils.GetDB().Create(sensorData)
 	if err := ret.Error; err != nil {
@@ -63,6 +66,10 @@ func CreateBatchSensorDataFromStructs(sensorData *[]SensorData) (int64, error) {
 	return ret.RowsAffected, nil
 }
 func CreateBatchPositionDataFromStructs(positionData *[]PositionData) (int64, error) {
+	if len(*positionData) == 0 {
+		return 0, nil
+	}
+
 	ret := dbutils.GetDB().Create(positionData)
 	if err := ret.Error; err != nil {
 		return 0, errors.Wrapf(err, "create batch sensor data '%v' failed", positionData)

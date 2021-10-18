@@ -157,6 +157,8 @@ class Server(threading.Thread):
     '''
     def run(self,conn,addr, packet_type):
         while not self.shutdown.is_set():
+            if packet_type == "":
+                continue
             # For testing, simulate choosing a random port connection to send data to
             true_or_false = [0,1]
             is_send = random.choice(true_or_false)
@@ -175,7 +177,7 @@ class Server(threading.Thread):
 
 #             packet = packet_stream_test[0]
             packet.end = "\x7F"
-            packet.epoch_ms = int(time.time() * 1000 + random.randint(0,1000))
+            packet.epoch_ms = int(time.time() * 1000 + random.randint(0,1000) - 17000)
 
             if is_send:
                 print('Sending data to db via port: ' + str(addr[1]))

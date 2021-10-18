@@ -53,6 +53,10 @@ func CreateSession(
 		SessionDuration:  sessionDuration,
 	}
 
+	if session.SessionDuration >= 9223372036854775806 {
+		session.SessionDuration = 9223372036854775806
+	}
+
 	if err := dbutils.GetDB().Create(&session).Error; err != nil {
 		return nil, 0, errors.Wrapf(err, "create session '%v' failed", session)
 	}
