@@ -1,6 +1,7 @@
 package vo
 
 import (
+	"dashboard-server/comms"
 	"dashboard-server/internal/session"
 	"dashboard-server/internal/session/po"
 	streamPo "dashboard-server/internal/stream/po"
@@ -60,11 +61,15 @@ func UploadSession(req UploadSessionReq) (*UploadSessionResp, error) {
 			}
 
 			if index == 0 && len(sensorDataCombined[1]) > moveNum && len(sensorDataCombined[2]) > moveNum { //only once
-				syncDelay := streamPo.ComputeSyncDelay([]uint64{
-					sensorDataCombined[0][moveNum].EpochMs,
-					sensorDataCombined[1][moveNum].EpochMs,
-					sensorDataCombined[2][moveNum].EpochMs})
-				_, err := streamPo.CreateSyncDelay(req.AccountName, req.SessionTimestamp, uint32(moveNum), syncDelay)
+				var err error
+
+				if moveNum + 1 >= len(sensorDataCombined[0]) ||  moveNum + 1 >= len(sensorDataCombined[1]) ||  moveNum + 1 >= len(sensorDataCombined[2]) {
+					syncDelay := comms.GetStreamBuffer().TotalSyncDelay
+					_, err = streamPo.CreateSyncDelay(req.AccountName, req.SessionTimestamp, uint32(moveNum), syncDelay)
+				} else {
+					_, err = streamPo.CreateSyncDelay(req.AccountName, req.SessionTimestamp, uint32(moveNum), 0)
+				}
+
 				if err != nil {
 					return nil, errors.Wrapf(err, "unable to create sync delay for session")
 				}

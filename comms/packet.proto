@@ -27,3 +27,13 @@ package session;
   uint64 epoch_ms= 2;
   string end = 3;
 }
+
+
+message ECG{
+  uint32 val1 = 1;
+  uint32 val2 = 2;
+  uint32 val3 = 3;
+  uint32 val4 = 4;
+  uint64 epoch_ms= 5;
+  string end = 6;
+}

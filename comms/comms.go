@@ -40,6 +40,8 @@ var (
 	streamMap        map[int]*Stream
 	streamBuffer     *StreamBuffer
 	streamBufferOnce sync.Once
+	portMapMutex = &sync.Mutex{}
+	portStartMutex = &sync.Mutex{}
 )
 
 type StreamCommand struct {
@@ -51,22 +53,73 @@ type StreamCommand struct {
 
 type StreamBuffer struct {
 	PortMap  map[int][]session.Packet
+	PortStatus  map[int]uint64
 	Position       []session.Position
 	groupSyncDelay chan uint64
 	pointer        int
-	totalSyncDelay uint64
+	TotalSyncDelay uint64
 }
 
 func (sb *StreamBuffer) Clear() {
 	sb.PortMap = make(map[int][]session.Packet)
+	sb.PortStatus = make(map[int]uint64)
 	sb.Position = make([]session.Position, 0)
 	sb.groupSyncDelay = make(chan uint64, bufferLength)
 	sb.pointer = 0
-	sb.totalSyncDelay = 0
+	sb.TotalSyncDelay = 0
 }
 
 func (sb *StreamBuffer) ReadGroupSyncDelay() uint64 {
 	return <- sb.groupSyncDelay
+}
+
+func (sb *StreamBuffer) UpdateStartGroupSyncDelay(packet session.Packet, port int) {
+	//input all kinds of inputs, predicted, start, end. publish everytime start is received. Reset when 3 ends or predictions is received
+	//if session packet buffer is full for all users at that index, can compute group sync delay
+
+	//status > 0: start epoch, status = 0 or !ok: cleared awaiting new start, port*2 ==1: ended/predicted
+
+	portStartMutex.Lock()
+	if packet.DanceMove == "START" {
+		sb.PortStatus[port] = packet.EpochMs
+		//sb.PortStatus[port*2] = 0
+	} else {
+		sb.PortStatus[port*2] = 1
+	}
+	
+	//if all packets have been predicted/ended, save to TotalSyncDelay and clear
+	if sb.PortStatus[8881*2] == 1 && sb.PortStatus[8882*2] == 1 && sb.PortStatus[8883*2] == 1 {
+		syncDelay := po.ComputeSyncDelay(
+			[]uint64{sb.PortStatus[8881],sb.PortStatus[8882],sb.PortStatus[8883]},
+		)
+
+		if packet.Accuracy >= 0 || packet.DanceMove == "END" { //only add to totalSyncDelay if a prediction/end is passed. If reconnecting, result is discarded
+			sb.TotalSyncDelay += syncDelay
+			if syncDelay > 0 {
+				sb.pointer += 1
+			}
+		}
+
+		sb.PortStatus[8881*2] = 0
+		sb.PortStatus[8882*2] = 0
+		sb.PortStatus[8883*2] = 0
+		sb.PortStatus[8881] = 0
+		sb.PortStatus[8882] = 0
+		sb.PortStatus[8883] = 0
+	}
+	portStartMutex.Unlock()
+
+	status1, ok1 := sb.PortStatus[8881]
+	status2, ok2 := sb.PortStatus[8882]
+	status3, ok3 := sb.PortStatus[8883]
+	
+	//Publish if all ports have a start epoch
+	if ok1 && status1 > 0 && ok2 && status2 > 0 && ok3 && status3 > 0 && packet.DanceMove == "START"{
+		syncDelay := po.ComputeSyncDelay(
+			[]uint64{status1,status2,status3},
+			)
+		sb.groupSyncDelay <- syncDelay
+	}
 }
 
 func (sb *StreamBuffer) UpdateGroupSyncDelay() {
@@ -94,7 +147,7 @@ func (sb *StreamBuffer) UpdateGroupSyncDelay() {
 			sb.PortMap[8883][sb.pointer].EpochMs})
 
 	sb.groupSyncDelay <- syncDelay
-	sb.totalSyncDelay += syncDelay
+	sb.TotalSyncDelay += syncDelay
 
 	sb.pointer += 1
 }
@@ -104,13 +157,14 @@ func (sb *StreamBuffer) GetAvgSyncDelay() uint64 {
 		return 0
 	}
 
-	return uint64(math.Round(float64(sb.totalSyncDelay) / float64(sb.pointer)))
+	return uint64(math.Round(float64(sb.TotalSyncDelay) / float64(sb.pointer)))
 }
 
 func GetStreamBuffer() *StreamBuffer {
 	streamBufferOnce.Do(func() {
 		streamBuffer = &StreamBuffer{
 			make(map[int][]session.Packet),
+			make(map[int]uint64),
 			make([]session.Position, 0),
 			make(chan uint64, bufferLength),
 			0,
@@ -278,11 +332,20 @@ func (s *Stream) handleRequest(conn net.Conn) {
 		if s.start {
 			packet = confidenceLevelAdjustment(packet)
 
-			if packet.DanceMove != "START" && packet.Accuracy > -4000 {
+			if packet.Accuracy > -4000 {
+
+				portMapMutex.Lock()
 				GetStreamBuffer().PortMap[s.port] = append(GetStreamBuffer().PortMap[s.port], *packet)
+				portMapMutex.Unlock()
 			}
 
-			go GetStreamBuffer().UpdateGroupSyncDelay()
+			//uncomment for default
+			//go GetStreamBuffer().UpdateGroupSyncDelay()
+
+			//comment these for default --> calculate true group sync delay and prompt dashboard
+			go GetStreamBuffer().UpdateStartGroupSyncDelay(*packet, s.port)
+			//------------------
+
 			s.packetStream <- *packet
 			moveNum += 1
 		}
