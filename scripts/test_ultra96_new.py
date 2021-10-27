@@ -19,7 +19,28 @@ MAX_CONNECTIONS = 4
 # Assign the host and port numbers of our Ultra96 Server
 IP_ADDR = '127.0.0.1'
 PORT = 8080     # Start Pseudo-Utlra96 server on a random port
-PORT_NUMS = [8880,8881,8882,8883]
+PORT_NUMS = [8880,8881,8882,8883,8884]
+
+ecg_stream_test = [
+    packet_pb2.ECG(
+        val1=130
+    ),
+    packet_pb2.ECG(
+        val1=570
+    ),
+    packet_pb2.ECG(
+        val1=801
+    ),
+    packet_pb2.ECG(
+        val1=1023
+    ),
+    packet_pb2.ECG(
+        val1=980
+    ),
+    packet_pb2.ECG(
+        val1=300
+    ),
+]
 
 position_stream_test = [
     packet_pb2.Position(
@@ -66,9 +87,8 @@ packet_stream_test = [
         accuracy=-4002,
     ),
 
-    packet_pb2.Packet(
-        dance_move = "Reconnecting...",
-        accuracy=-4002,
+    packet_pb2.Alert(
+        message="position detected as 123 instead of 321, MOVE LEFT"
     ),
 
     packet_pb2.Packet(
@@ -82,7 +102,7 @@ packet_stream_test = [
     packet_pb2.Packet(
         dance_move = "James Bond",
         accuracy=0.61,
-    ),
+    )
 ]
 
 class Server(threading.Thread):
@@ -109,6 +129,7 @@ class Server(threading.Thread):
         self.socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket3 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket5 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         address1 = (self.ip_addr, PORT_NUMS[0])
         print('Ultra96 Server starting on %s port %s. Allowing connection from db' % address1)
@@ -129,6 +150,11 @@ class Server(threading.Thread):
         print('Ultra96 Server starting on %s port %s. Allowing connection from db' % address4)
         self.socket4.bind(address4)
         self.socket4.listen(1)
+
+        address5 = (self.ip_addr, PORT_NUMS[4])
+        print('Ultra96 Server starting on %s port %s. Allowing connection from db' % address5)
+        self.socket5.bind(address5)
+        self.socket5.listen(1)
 
         while True:
             conn1, db_addr1 = self.socket1.accept()
@@ -160,6 +186,14 @@ class Server(threading.Thread):
             print(f'Connection from {db_addr4} has been establised')
             print(len(self.db_connections))
 
+            conn5, db_addr5 = self.socket5.accept()
+            db_thread5 = threading.Thread(target=self.run, args=(conn5,db_addr5, "ecg"))
+            self.db_connections.append(conn5)
+            db_thread5.daemon = True
+            db_thread5.start()
+            print(f'Connection from {db_addr5} has been establised')
+            print(len(self.db_connections))
+
     '''
     Main Run function that will be constantly checking for data and sending over to dashboard server
     '''
@@ -182,7 +216,9 @@ class Server(threading.Thread):
             # Format - # user | dance_move | accuracy
 
             packet = {}
-            if packet_type == "position":
+            if packet_type == "ecg":
+                packet = ecg_stream_test[random.randint(0, len(ecg_stream_test) - 1)]
+            elif packet_type == "position":
                 packet = position_stream_test[random.randint(0, len(position_stream_test) - 1)]
                 packet.epoch_ms = int(time.time() * 1000)
             else:
@@ -200,11 +236,14 @@ class Server(threading.Thread):
             packet.end = "\x7F"
 
             if is_send:
-                print('Sending data to db via port: ' + str(addr[1]))
+#                 print('Sending data to db via port: ' + str(addr[1]))
+                print(packet)
                 conn.sendall(packet.SerializeToString())
 
             if packet_type == "position":
                 time.sleep(6)
+            elif packet_type == "ecg":
+                time.sleep(0.5)
             elif counter % 3 == 1:
                 time.sleep(10)
             elif counter % 3 == 2:

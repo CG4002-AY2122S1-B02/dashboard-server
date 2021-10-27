@@ -32,8 +32,8 @@ const (
 	~(9s) 0.49 Mermaid
 	 */
 
-	lowerBound3star = 0.65
-	lowerBound2star = 0.55
+	lowerBound3star = 0.85
+	lowerBound2star = 0.75
 )
 
 var (
@@ -189,6 +189,7 @@ type Stream struct {
 	start            bool
 	lastMove         chan string
 	lastAccuracy     chan float32
+	alert			chan session.Alert
 }
 
 func GetStream(port int) *Stream {
@@ -211,6 +212,7 @@ func InitialiseStream(port int,
 		start:         start,
 		lastMove:      make(chan string, bufferLength),
 		lastAccuracy:  make(chan float32, bufferLength),
+		alert: make(chan session.Alert, bufferLength),
 	}
 
 	go streamMap[port].ClientListen()
@@ -306,6 +308,10 @@ func (s *Stream) ClientListen() {
 	s.handleRequest(c)
 }
 
+func (s *Stream) ReadAlert() session.Alert{
+	return <-s.alert
+}
+
 func (s *Stream) handleRequest(conn net.Conn) {
 	br := bufio.NewReader(conn)
 	moveNum := 0
@@ -322,7 +328,20 @@ func (s *Stream) handleRequest(conn net.Conn) {
 		packet := &session.Packet{}
 		err = proto.Unmarshal(packetData, packet)
 		if err != nil {
+			//if not session.Packet, must be alert packet
 			fmt.Println("Unmarshall Error", err.Error())
+			continue
+		}
+
+		if packet.DanceMove == "\x7F" {
+			alert := &session.Alert{}
+			if err2 := proto.Unmarshal(packetData, alert); err2 != nil {
+				fmt.Println("Unmarshall Error", err2.Error())
+				continue
+			}
+
+			s.alert <- *alert
+			continue
 		}
 
 		if s.checkCommandStream() {

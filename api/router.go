@@ -52,8 +52,28 @@ func NewRouter() *Router {
 		}
 		websocketHandler(c.Writer, c.Request, port, attribute)
 	})
+
+	streamAPI.GET("/alert/:port/", func(c *gin.Context) {
+		//move this to stream file
+		portStr := c.Param("port")
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			c.String(404, "tcp port does not exist err: "+err.Error())
+			return
+		}
+		if comms.GetStream(port) == nil {
+			c.String(404, "stream does not exist")
+			return
+		}
+		websocketAlert(c.Writer, c.Request, port)
+	})
+
 	streamAPI.GET("/position", func(c *gin.Context) {
 		websocketPositionData(c.Writer, c.Request)
+	})
+
+	streamAPI.GET("/ecg", func(c *gin.Context) {
+		websocketECGData(c.Writer, c.Request)
 	})
 
 	streamAPI.GET("/sync", func(c *gin.Context) {
@@ -112,6 +132,7 @@ func (r *Router) Run() {
 	comms.NewStream(8881)
 	comms.NewStream(8882)
 	comms.NewStream(8883)
+	comms.GetECGStream()
 
 	port := 8081
 

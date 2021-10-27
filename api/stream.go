@@ -55,6 +55,23 @@ func websocketHandler(w http.ResponseWriter, r *http.Request, port int, attribut
 	}
 }
 
+func websocketAlert(w http.ResponseWriter, r *http.Request, port int) error {
+	wsupgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	conn, err := wsupgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Failed to set websocket upgrade: %+v\n", err)
+		return errors.Wrap(err, "websocket handler error")
+	}
+
+	for {
+		stream := comms.GetStream(port)
+		alert := stream.ReadAlert()
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(alert.Message)); err != nil {
+			return errors.Wrap(err, "failed to read 'alert' stream")
+		}
+	}
+}
+
 func websocketPositionData(w http.ResponseWriter, r *http.Request) error {
 	wsupgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	conn, err := wsupgrader.Upgrade(w, r, nil)
@@ -67,6 +84,22 @@ func websocketPositionData(w http.ResponseWriter, r *http.Request) error {
 		position := comms.PositionDataStream.ReadStream()
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(position.Position)); err != nil {
 			return errors.Wrap(err, "failed to read 'position' stream")
+		}
+	}
+}
+
+func websocketECGData(w http.ResponseWriter, r *http.Request) error {
+	wsupgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	conn, err := wsupgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Failed to set websocket upgrade: %+v\n", err)
+		return errors.Wrap(err, "websocket handler error")
+	}
+
+	for {
+		ecgData := comms.ECGDataStream.ReadStream()
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprint(ecgData.Val1))); err != nil {
+			return errors.Wrap(err, "failed to read 'ecg data' stream")
 		}
 	}
 }
