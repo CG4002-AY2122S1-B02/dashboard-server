@@ -98,7 +98,8 @@ func websocketECGData(w http.ResponseWriter, r *http.Request) error {
 
 	for {
 		ecgData := comms.ECGDataStream.ReadStream()
-		if err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprint(ecgData.Val1))); err != nil {
+		//fmt.Println(ecgData)
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprint(ecgData.Val3))); err != nil {
 			return errors.Wrap(err, "failed to read 'ecg data' stream")
 		}
 	}

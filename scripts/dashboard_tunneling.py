@@ -12,7 +12,7 @@ TUNNEL_TWO_SSH_ADDR = "137.132.86.225"
 TUNNEL_TWO_SSH_USERNAME = "xilinx"
 TUNNEL_TWO_SSH_PASSWORD = "cg4002b02"
 
-port_nums = [8880, 8881, 8882, 8883]
+port_nums = [8880, 8881, 8882, 8883, 8884]
 
 tunnel_one =  sshtunnel.open_tunnel(
     # Port 22 open for SSH

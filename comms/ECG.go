@@ -12,7 +12,10 @@ import (
 )
 
 const (
-	ECGStreamPort = "8884"
+	ECGStreamPort        = "8884"
+	MinDanceMovesToFatigue = 3
+	ECGMarginToFatigue = 0.06
+	ECGUserPort = 8882
 )
 
 var (
@@ -22,36 +25,57 @@ var (
 
 type ECGStream struct {
 	ecgStream chan session.ECG
-	commandStream  chan bool
 	start          bool
+	pastECGMax		uint32
+	currentECGMax		uint32
 }
 
 func GetECGStream() *ECGStream {
 	ECGOnce.Do(func() {
 		ecgStream := make(chan session.ECG, bufferLength)
-		commandStream := make(chan bool, bufferLength)
 		ECGDataStream = &ECGStream{ecgStream: ecgStream,
-			commandStream: commandStream, start: testPosition}
+			start: testPosition}
 		go ECGDataStream.ClientListen()
 	})
 
 	return ECGDataStream
 }
 
+func (ecg *ECGStream) alertIfFatigued(ecgValue *session.ECG) {
+	if ecg.start && ecgValue.Val3 > ecg.currentECGMax {
+		ecg.currentECGMax = ecgValue.Val3
+		fmt.Println("ECG current Max: ", ecg.currentECGMax, ", ECG past Max: ", ecg.pastECGMax)
+	} else if !ecg.start && ecg.currentECGMax > 0 {
+		ecg.pastECGMax = ecg.currentECGMax
+		ecg.currentECGMax = 0
+	}
+
+	if float64(ecg.currentECGMax) > float64(ecg.pastECGMax) * (1 + ECGMarginToFatigue) &&
+		len(GetStreamBuffer().PortMap[ECGUserPort]) > MinDanceMovesToFatigue { //trigger alert
+		alert := &session.Alert{Message: "Muscles Fatigued! Do exercise caution!"}
+		fmt.Println(">>>Muscles Fatigued!")
+
+		ecg.pastECGMax = ecg.currentECGMax
+
+		//might need mutex here to protect stream object todo
+		GetStream(ECGUserPort).alert <- *alert
+	}
+}
+
 func (ecg *ECGStream) ReadStream() session.ECG {
-	return <-ecg.ecgStream
+	ecgValue := <-ecg.ecgStream
+	ecg.alertIfFatigued(&ecgValue)
+	return ecgValue
+}
+
+func (ecg *ECGStream) Clear() {
+	ecg.UpdateCommandStream(false)
+	ecg.pastECGMax = 0
+	ecg.currentECGMax = 0
 }
 
 func (ecg *ECGStream) UpdateCommandStream(state bool) {
-	ecg.commandStream <- state
-}
-
-func (ecg *ECGStream) checkCommandStream() bool {
-	if len(ecg.commandStream) == 0 {
-		return false
-	}
-
-	return <-ecg.commandStream
+	ecg.start = state
 }
 
 func (ecg *ECGStream) ClientListen() {
@@ -84,8 +108,6 @@ func (ecg *ECGStream) handleRequest(conn net.Conn) {
 		if err != nil {
 			fmt.Println("Unmarshall Error", err.Error())
 		}
-
-		ecg.checkCommandStream()
 
 		//if ecg.start {
 		//	GetStreamBuffer().Position = append(GetStreamBuffer().Position, *ecgData)

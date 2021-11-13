@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -39,7 +40,9 @@ func GetPositionStream() *PositionStream {
 }
 
 func (p *PositionStream) ReadStream() session.Position {
-	return <-p.positionStream
+	position := <-p.positionStream
+	//fmt.Println("position: ", position)
+	return position
 }
 
 func (p *PositionStream) UpdateCommandStream(state bool) {
@@ -110,7 +113,7 @@ func (p *PositionStream) handleRequest(conn net.Conn) {
 
 		p.checkCommandStream()
 
-		if p.start {
+		if p.start && len(position.Position) == 3 && !strings.Contains(position.Position, "-") {
 			GetStreamBuffer().Position = append(GetStreamBuffer().Position, *position)
 		}
 		p.positionStream <- *position

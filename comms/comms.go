@@ -33,7 +33,8 @@ const (
 	 */
 
 	lowerBound3star = 0.85
-	lowerBound2star = 0.75
+	lowerBound2star = 0.70
+	MaxSyncDelay = 40000
 )
 
 var (
@@ -58,6 +59,7 @@ type StreamBuffer struct {
 	groupSyncDelay chan uint64
 	pointer        int
 	TotalSyncDelay uint64
+	logoutNum uint32
 }
 
 func (sb *StreamBuffer) Clear() {
@@ -67,6 +69,7 @@ func (sb *StreamBuffer) Clear() {
 	sb.groupSyncDelay = make(chan uint64, bufferLength)
 	sb.pointer = 0
 	sb.TotalSyncDelay = 0
+	sb.logoutNum = 0
 }
 
 func (sb *StreamBuffer) ReadGroupSyncDelay() uint64 {
@@ -81,6 +84,25 @@ func (sb *StreamBuffer) UpdateStartGroupSyncDelay(packet session.Packet, port in
 
 	portStartMutex.Lock()
 	if packet.DanceMove == "START" {
+
+		//if difference is too long, reset
+		if port == 8881 && ((sb.PortStatus[8882*2] == 1 && sb.PortStatus[8882] > packet.EpochMs + MaxSyncDelay) || (sb.PortStatus[8883*2] == 1 && sb.PortStatus[8883] > packet.EpochMs + MaxSyncDelay)) {
+			sb.PortStatus[8882] = 0
+			sb.PortStatus[8882 * 2] = 0
+			sb.PortStatus[8883] = 0
+			sb.PortStatus[8883 * 2] = 0
+		} else if port == 8882 && ((sb.PortStatus[8881*2] == 1 && sb.PortStatus[8881] > packet.EpochMs + MaxSyncDelay) || (sb.PortStatus[8883*2] == 1 && sb.PortStatus[8883] > packet.EpochMs + MaxSyncDelay)) {
+			sb.PortStatus[8881] = 0
+			sb.PortStatus[8881 * 2] = 0
+			sb.PortStatus[8883] = 0
+			sb.PortStatus[8883 * 2] = 0
+		} else if port == 8883 && ((sb.PortStatus[8882*2] == 1 && sb.PortStatus[8882] > packet.EpochMs + MaxSyncDelay) || (sb.PortStatus[8881*2] == 1 && sb.PortStatus[8881] > packet.EpochMs + MaxSyncDelay)) {
+			sb.PortStatus[8882] = 0
+			sb.PortStatus[8882 * 2] = 0
+			sb.PortStatus[8881] = 0
+			sb.PortStatus[8881 * 2] = 0
+		}
+
 		sb.PortStatus[port] = packet.EpochMs
 		//sb.PortStatus[port*2] = 0
 	} else {
@@ -94,9 +116,9 @@ func (sb *StreamBuffer) UpdateStartGroupSyncDelay(packet session.Packet, port in
 		)
 
 		if packet.Accuracy >= 0 || packet.DanceMove == "END" { //only add to totalSyncDelay if a prediction/end is passed. If reconnecting, result is discarded
-			sb.TotalSyncDelay += syncDelay
-			if syncDelay > 0 {
+			if syncDelay > 0 && syncDelay < MaxSyncDelay {
 				sb.pointer += 1
+				sb.TotalSyncDelay += syncDelay
 			}
 		}
 
@@ -118,7 +140,9 @@ func (sb *StreamBuffer) UpdateStartGroupSyncDelay(packet session.Packet, port in
 		syncDelay := po.ComputeSyncDelay(
 			[]uint64{status1,status2,status3},
 			)
-		sb.groupSyncDelay <- syncDelay
+		if syncDelay < MaxSyncDelay {
+			sb.groupSyncDelay <- syncDelay
+		}
 	}
 }
 
@@ -140,7 +164,6 @@ func (sb *StreamBuffer) UpdateGroupSyncDelay() {
 
 	//all buffers would be at least len(sb.PortMap) long
 	//now pointer points to the buffer slot to compute group sync delay
-
 	syncDelay := po.ComputeSyncDelay(
 		[]uint64{sb.PortMap[8881][sb.pointer].EpochMs,
 			sb.PortMap[8882][sb.pointer].EpochMs,
@@ -167,6 +190,7 @@ func GetStreamBuffer() *StreamBuffer {
 			make(map[int]uint64),
 			make([]session.Position, 0),
 			make(chan uint64, bufferLength),
+			0,
 			0,
 			0,
 		}
@@ -221,6 +245,16 @@ func InitialiseStream(port int,
 
 func (s *Stream) ReadStream() session.Packet {
 	packet := <-s.packetStream
+	if packet.DanceMove == "Logout" {
+		GetStreamBuffer().logoutNum ++
+	}
+
+	if GetStreamBuffer().logoutNum >= 3 {
+		packet.DanceMove = "LOGOUT"
+		s.lastMove <- "LOGOUT"
+		return packet
+	}
+
 	if packet.Accuracy >= 0 {
 		s.lastMove <- packet.DanceMove
 		s.lastAccuracy <- packet.Accuracy
@@ -243,6 +277,7 @@ func UpdateCommandStream(start bool, accountName string,
 
 	if start == true {
 		GetStreamBuffer().Clear()
+		GetECGStream().Clear()
 	}
 
 	GetPositionStream().UpdateCommandStream(start)
@@ -329,14 +364,17 @@ func (s *Stream) handleRequest(conn net.Conn) {
 		err = proto.Unmarshal(packetData, packet)
 		if err != nil {
 			//if not session.Packet, must be alert packet
-			fmt.Println("Unmarshall Error", err.Error())
+			fmt.Println("Unmarshall Dance Move Error", err.Error(), "->",packetData)
 			continue
+
+			//packet.Accuracy = 2
+			//packet.DanceMove = "James Bond"
 		}
 
 		if packet.DanceMove == "\x7F" {
 			alert := &session.Alert{}
 			if err2 := proto.Unmarshal(packetData, alert); err2 != nil {
-				fmt.Println("Unmarshall Error", err2.Error())
+				fmt.Println("Unmarshall Alert Error", err2.Error(), "->", packetData)
 				continue
 			}
 
@@ -356,6 +394,12 @@ func (s *Stream) handleRequest(conn net.Conn) {
 				portMapMutex.Lock()
 				GetStreamBuffer().PortMap[s.port] = append(GetStreamBuffer().PortMap[s.port], *packet)
 				portMapMutex.Unlock()
+			}
+
+			if packet.Accuracy < -4000 && packet.DanceMove == "START" && s.port == ECGUserPort {
+				GetECGStream().UpdateCommandStream(true)
+			} else if s.port == ECGUserPort {
+				GetECGStream().UpdateCommandStream(false)
 			}
 
 			//uncomment for default

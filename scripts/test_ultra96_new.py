@@ -102,7 +102,20 @@ packet_stream_test = [
     packet_pb2.Packet(
         dance_move = "James Bond",
         accuracy=0.61,
-    )
+    ),
+
+    packet_pb2.Packet(
+        dance_move = "START",
+        accuracy=-4001,
+    ),
+    packet_pb2.Packet(
+        dance_move = "START",
+        accuracy=-4001,
+    ),
+
+    packet_pb2.Alert(
+        message="Oops! You're not Moving Right Enough! (detected 'S' instead of 'R')"
+    ),
 ]
 
 class Server(threading.Thread):
